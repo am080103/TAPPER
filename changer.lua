@@ -303,11 +303,16 @@ local function write_fallback(wpn, paint, wear, seed, stat, statval)
     w_i32(wpn + off.m_nFallbackStatTrak, stat and (statval or 0) or -1)
 end
 
-local function mark_item_custom(item)
+local function mark_item_custom(item, restore_mat)
+    -- Keep the item in fallback/custom mode, but do not force the engine
+    -- to restore cached custom materials for normal weapon skins. On some
+    -- CS2 builds that flag can leave paintkit materials looking scrambled
+    -- after the vfunc refresh, even though the paint ID is correct.
     w_u32(item + off.m_iItemIDHigh, 0xFFFFFFFF)
+    if off.m_iItemIDLow then w_u32(item + off.m_iItemIDLow, 0xFFFFFFFF) end
     w_u8 (item + off.m_bInitialized, 1)
     w_u8 (item + off.m_bDisallowSOC, 0)
-    w_u8 (item + off.m_bRestoreCustomMat, 1)
+    w_u8 (item + off.m_bRestoreCustomMat, restore_mat and 1 or 0)
 end
 
 local function refresh_econ(wpn)
@@ -341,30 +346,34 @@ end
 
 local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
     local item = set_knife_subclass(wpn, def_target, 3)
-    mark_item_custom(item)
+    mark_item_custom(item, false)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
 end
 
 -- ============================================================
--- EXPERIMENT: normal weapons use regen_skins from run() instead of hard-coded vfunc 195.
--- Knives still keep the old refresh path.
+-- FIX: Added vcall_void(wpn, 195) to force skin update
 -- ============================================================
 local function process_weapon(wpn, paint, wear, seed, stat, statval)
-    mark_item_custom(item_ptr(wpn))
+    mark_item_custom(item_ptr(wpn), false)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
+    vcall_void(wpn, 195)  -- Force weapon to re-apply its skin
 end
 
 local function restore_weapon(wpn)
+    local item = item_ptr(wpn)
+    if item and off.m_bRestoreCustomMat then w_u8(item + off.m_bRestoreCustomMat, 0) end
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
+    vcall_void(wpn, 195)
 end
 
 local function restore_knife(wpn, pawn)
     local def_target = (r_u8(pawn + off.m_iTeamNum) == 2) and 59 or 42
-    set_knife_subclass(wpn, def_target, 0)
+    local item = set_knife_subclass(wpn, def_target, 0)
+    if item and off.m_bRestoreCustomMat then w_u8(item + off.m_bRestoreCustomMat, 0) end
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
