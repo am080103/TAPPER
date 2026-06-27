@@ -1,8 +1,8 @@
 -- ============================================================
 -- loader.lua – Fetches and runs the other files from GitHub
 -- ============================================================
-local USER = "MudillaScripts"          -- CHANGE to your GitHub username
-local REPO = "aw_cs2v6_femboytap"      -- CHANGE to your repository name
+local USER = "am080103"          -- CHANGE to your GitHub username
+local REPO = "TAPPER"      -- CHANGE to your repository name
 local BRANCH = "main"                  -- or "master" / "release"
 
 local BASE = "https://raw.githubusercontent.com/" .. USER .. "/" .. REPO .. "/" .. BRANCH .. "/"
