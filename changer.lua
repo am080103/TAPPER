@@ -348,10 +348,8 @@ local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
 end
 
 -- ============================================================
--- Normal weapons: do NOT call the old hard-coded vfunc 195.
--- In current CS2 builds that index can hit the wrong virtual function
--- and leave paint-kit materials looking corrupted/scrambled.
--- The run() loop already calls regen_skins() once after a change.
+-- EXPERIMENT: normal weapons use regen_skins from run() instead of hard-coded vfunc 195.
+-- Knives still keep the old refresh path.
 -- ============================================================
 local function process_weapon(wpn, paint, wear, seed, stat, statval)
     mark_item_custom(item_ptr(wpn))
@@ -971,15 +969,11 @@ function C.setLocalModel(path)
     return state.localModel
 end
 
-local function changer_tick()
+callbacks.Register("CreateMove", function()
     local okd, d = pcall(active_weapon_def); g_activeDef = okd and d or nil
     local ok, err = pcall(run)
     if not ok then print("[changer] error: " .. tostring(err)) end
-end
-
--- CS2/V5 docs list Draw and Unload as the generic callbacks; run the changer
--- from Draw instead of relying on CreateMove being present.
-pcall(function() callbacks.Register("Draw", "FemboyTap_Changer", changer_tick) end)
+end)
 
 resolve()
 pcall(resolve_model_fns)
