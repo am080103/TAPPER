@@ -1,5 +1,5 @@
 -- ============================================================
--- changer.lua – Skin & Model Changer (FINAL FIXED)
+-- changer.lua – Skin & Model Changer (FULL WORKING)
 -- ============================================================
 
 local ffi = ffi
@@ -371,20 +371,6 @@ local function restore_knife(wpn, pawn)
     vcall_void(wpn, 195)
 end
 
--- ... (rest of the file remains unchanged from the previous working version) ...
-
--- ============================================================
--- The rest of the code (glove functions, entity handling,
--- scan_models, apply_local_model, run, Config, etc.) is exactly
--- as in the last working version. I'm including it below for completeness.
--- ============================================================
-
--- (I'll paste the remaining code from the previous version here,
---  but since it's already in your file, you can keep it.
---  The only changes are in process_weapon and restore_weapon.)
-
-return C
-
 local ATTR_STRUCT = 72
 
 local game_alloc, game_free
@@ -603,7 +589,6 @@ local function scan_models()
             for _, sub in ipairs(SCAN_DIRS) do scan_into(root .. "\\" .. sub, names, paths) end
         end
     end)
-    -- If no models were found, add fallback vanilla models
     if #names == 1 then
         local fallback = {
             "models/player/ct_urban.vmdl",
@@ -671,7 +656,7 @@ local function precache_model(path)
 end
 
 -- ============================================================
--- FIXED apply_local_model – always sets a default if needed
+-- apply_local_model
 -- ============================================================
 local function apply_local_model(pawn, lp)
     if not fnptr.set_model then return end
@@ -694,15 +679,12 @@ local function apply_local_model(pawn, lp)
         state.appliedLocalModel = path
         state.overrideActive    = true
     else
-        -- We want to restore original or set a default
         if state.appliedLocalModel == "OFF" then return end
-        -- If we have an original model, restore it
         if state.origModelName then
             precache_model(state.origModelName)
             pcall(function() fnptr.set_model(ffi.cast("void*", pawn), state.origModelName) end)
             state.overrideActive = false
         else
-            -- No original model – set a safe default
             local default = "models/player/ct_urban.vmdl"
             precache_model(default)
             pcall(function() fnptr.set_model(ffi.cast("void*", pawn), default) end)
