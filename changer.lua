@@ -304,14 +304,19 @@ local function write_fallback(wpn, paint, wear, seed, stat, statval)
 end
 
 local function mark_item_custom(item, restore_mat)
-    -- Keep the item in fallback/custom mode, but do not force the engine
-    -- to restore cached custom materials. Leave m_iItemIDLow untouched:
+    -- Force CS2 to rebuild texture-heavy custom material paint kits instead
+    -- of reusing a cached/half-built material. Leave m_iItemIDLow untouched:
     -- setting both high+low to 0xFFFFFFFF can make some CS2 paint kits
     -- resolve fallback materials inconsistently on current builds.
     w_u32(item + off.m_iItemIDHigh, 0xFFFFFFFF)
-    w_u8 (item + off.m_bInitialized, 1)
+    w_u8 (item + off.m_bInitialized, 0)
     w_u8 (item + off.m_bDisallowSOC, 0)
     w_u8 (item + off.m_bRestoreCustomMat, restore_mat and 1 or 0)
+end
+
+local function finish_item_custom(item)
+    -- Re-mark initialized after the refresh vfunc has had a chance to rebuild.
+    if item then w_u8(item + off.m_bInitialized, 1) end
 end
 
 local function refresh_econ(wpn)
@@ -345,20 +350,23 @@ end
 
 local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
     local item = set_knife_subclass(wpn, def_target, 3)
-    mark_item_custom(item, false)
+    mark_item_custom(item, true)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
+    finish_item_custom(item)
 end
 
 -- ============================================================
 -- FIX: Added vcall_void(wpn, 195) to force skin update
 -- ============================================================
 local function process_weapon(wpn, paint, wear, seed, stat, statval)
-    mark_item_custom(item_ptr(wpn), false)
+    local item = item_ptr(wpn)
+    mark_item_custom(item, true)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)  -- Force weapon to re-apply its skin
+    finish_item_custom(item)
 end
 
 local function restore_weapon(wpn)
