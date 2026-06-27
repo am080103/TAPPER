@@ -4,6 +4,15 @@
 local M = _G.FEMBOYTAP_GUI
 local C = _G.FEMBOYTAP_CHANGER
 
+-- Shared low-level helpers used below. These were local to changer.lua,
+-- so main.lua must define its own copies instead of relying on globals.
+local function valid(p) return p ~= nil and p > 0x10000 and p < 0x7FFFFFFFFFFF end
+local function r_ptr(a)
+    if type(ffi) ~= "table" then return nil end
+    return tonumber(ffi.cast("uint64_t*", a)[0])
+end
+local SIG = rawget(_G, "FEMBOYTAP_SIG") or {}
+
 if not M or not C then
     error("Required modules not loaded (GUI or Changer)")
 end
@@ -142,6 +151,7 @@ do
             int   FlushInstructionCache(void*, void*, size_t);
         ]] end)
 
+        if not SIG.vm then print("[femboytap] VM: sig not configured"); return false end
         local a = mem.FindPattern("client.dll", SIG.vm)
         if not a or a == 0 then print("[femboytap] VM: sig not found"); return false end
         match = a
@@ -293,6 +303,7 @@ do
 
     local band, rshift = (bit_ or {}).band, (bit_ or {}).rshift
     local function slot(elist, idx)
+        if not (band and rshift) then return nil end
         if not valid(elist) then return nil end
         local chunk = r_ptr(elist + 8 * rshift(idx, 9) + 16); if not valid(chunk) then return nil end
         local e = r_ptr(chunk + 112 * band(idx, 0x1FF))

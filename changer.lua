@@ -970,11 +970,15 @@ function C.setLocalModel(path)
     return state.localModel
 end
 
-callbacks.Register("CreateMove", function()
+local function changer_tick()
     local okd, d = pcall(active_weapon_def); g_activeDef = okd and d or nil
     local ok, err = pcall(run)
     if not ok then print("[changer] error: " .. tostring(err)) end
-end)
+end
+
+-- CS2/V5 docs list Draw and Unload as the generic callbacks; run the changer
+-- from Draw instead of relying on CreateMove being present.
+pcall(function() callbacks.Register("Draw", "FemboyTap_Changer", changer_tick) end)
 
 resolve()
 pcall(resolve_model_fns)
