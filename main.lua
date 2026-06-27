@@ -1,11 +1,14 @@
 -- ============================================================
--- main.lua – Main Logic & UI Setup (femboytap.lua)
+-- main.lua – Main Script (femboytap.lua)
 -- ============================================================
-local floor = math.floor
+local M = _G.FEMBOYTAP_GUI
+local C = _G.FEMBOYTAP_CHANGER
 
--- The GUI library and changer are already loaded as M and C
-local M = require("guilib")  -- or they are already in global due to loader
-local C = require("changer")
+if not M or not C then
+    error("Required modules not loaded (GUI or Changer)")
+end
+
+local floor = math.floor
 
 local VM = {}
 local HS = {}
