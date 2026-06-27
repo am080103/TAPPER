@@ -1,5 +1,5 @@
 -- ============================================================
--- main.lua – Main Script (femboytap.lua)
+-- main.lua – Main Script (FIXED)
 -- ============================================================
 local M = _G.FEMBOYTAP_GUI
 local C = _G.FEMBOYTAP_CHANGER
@@ -91,12 +91,20 @@ local function persistOpts()
     if v ~= lastAuto then lastAuto = v; C.setOpt("autoFollow", v) end
 end
 
+-- ============================================================
+-- FIXED syncModel
+-- ============================================================
 local function syncModel()
     if not modelLb then return end
     local sel = modelLb:Get()
     if sel == lastModelSel then return end
     lastModelSel = sel
-    C.setLocalModel(modelPaths and modelPaths[sel] or nil)
+    if sel == 1 then
+        -- OFF selected – clear override
+        C.setLocalModel(nil)
+    else
+        C.setLocalModel(modelPaths and modelPaths[sel] or nil)
+    end
 end
 
 do
