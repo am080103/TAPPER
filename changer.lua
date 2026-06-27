@@ -348,19 +348,20 @@ local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
 end
 
 -- ============================================================
--- FIX: Added vcall_void(wpn, 195) to force skin update
+-- Normal weapons: do NOT call the old hard-coded vfunc 195.
+-- In current CS2 builds that index can hit the wrong virtual function
+-- and leave paint-kit materials looking corrupted/scrambled.
+-- The run() loop already calls regen_skins() once after a change.
 -- ============================================================
 local function process_weapon(wpn, paint, wear, seed, stat, statval)
     mark_item_custom(item_ptr(wpn))
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
-    vcall_void(wpn, 195)  -- Force weapon to re-apply its skin
 end
 
 local function restore_weapon(wpn)
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
-    vcall_void(wpn, 195)
 end
 
 local function restore_knife(wpn, pawn)
