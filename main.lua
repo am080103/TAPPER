@@ -91,9 +91,6 @@ local function persistOpts()
     if v ~= lastAuto then lastAuto = v; C.setOpt("autoFollow", v) end
 end
 
--- ============================================================
--- FIXED syncModel
--- ============================================================
 local function syncModel()
     if not modelLb then return end
     local sel = modelLb:Get()
