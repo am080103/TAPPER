@@ -1,8 +1,8 @@
 -- ============================================================
 -- loader.lua – Fetches and runs the other files from GitHub
 -- ============================================================
-local USER = "am080103"          -- CHANGE to your GitHub username
-local REPO = "TAPPER"      -- CHANGE to your repository name
+local USER = "MudillaScripts"          -- CHANGE to your GitHub username
+local REPO = "aw_cs2v6_femboytap"      -- CHANGE to your repository name
 local BRANCH = "main"                  -- or "master" / "release"
 
 local BASE = "https://raw.githubusercontent.com/" .. USER .. "/" .. REPO .. "/" .. BRANCH .. "/"
@@ -28,7 +28,13 @@ local function fetch_and_run(file)
     return true
 end
 
-local files = { "guilib.lua", "changer.lua", "main.lua" }
+-- Load in correct order
+local files = {
+    "guilib.lua",
+    "skins_data.lua",   -- NEW: SKINS table
+    "changer.lua",
+    "main.lua"
+}
 for _, f in ipairs(files) do
     if not fetch_and_run(f) then
         print("[loader] Aborting due to failure loading " .. f)
