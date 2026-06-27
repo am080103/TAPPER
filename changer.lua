@@ -290,6 +290,28 @@ local state = {
 local Config = {}
 local g_activeDef = nil
 
+-- Some CS2 texture-heavy paint kits appear to need the custom material
+-- rebuild to survive past the immediate refresh call. Keep the item
+-- temporarily uninitialized, then mark it initialized a couple frames later.
+local materialTick = 0
+local pendingMaterialInit = {}
+
+local function finish_pending_materials()
+    materialTick = materialTick + 1
+    for item, due in pairs(pendingMaterialInit) do
+        if materialTick >= due then
+            pendingMaterialInit[item] = nil
+            if valid(item) and off.m_bInitialized then
+                pcall(function() w_u8(item + off.m_bInitialized, 1) end)
+            end
+        end
+    end
+end
+
+local function queue_material_finish(item)
+    if valid(item) then pendingMaterialInit[item] = materialTick + 3 end
+end
+
 local function item_ptr(wpn) return wpn + off.m_AttributeManager + off.m_Item end
 local function safe_wear(wear)
     if not wear or wear <= 0 then return 0.0001 end
@@ -303,20 +325,14 @@ local function write_fallback(wpn, paint, wear, seed, stat, statval)
     w_i32(wpn + off.m_nFallbackStatTrak, stat and (statval or 0) or -1)
 end
 
-local function mark_item_custom(item, restore_mat)
-    -- Force CS2 to rebuild texture-heavy custom material paint kits instead
-    -- of reusing a cached/half-built material. Leave m_iItemIDLow untouched:
-    -- setting both high+low to 0xFFFFFFFF can make some CS2 paint kits
-    -- resolve fallback materials inconsistently on current builds.
+local function mark_item_custom(item)
     w_u32(item + off.m_iItemIDHigh, 0xFFFFFFFF)
+    -- Leave uninitialized briefly so CS2 rebuilds texture-heavy custom materials
+    -- after the fallback paint kit is written and the refresh vfunc runs.
     w_u8 (item + off.m_bInitialized, 0)
     w_u8 (item + off.m_bDisallowSOC, 0)
-    w_u8 (item + off.m_bRestoreCustomMat, restore_mat and 1 or 0)
-end
-
-local function finish_item_custom(item)
-    -- Re-mark initialized after the refresh vfunc has had a chance to rebuild.
-    if item then w_u8(item + off.m_bInitialized, 1) end
+    w_u8 (item + off.m_bRestoreCustomMat, 1)
+    queue_material_finish(item)
 end
 
 local function refresh_econ(wpn)
@@ -350,28 +366,23 @@ end
 
 local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
     local item = set_knife_subclass(wpn, def_target, 3)
-    mark_item_custom(item, true)
+    mark_item_custom(item)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
-    finish_item_custom(item)
 end
 
 -- ============================================================
 -- FIX: Added vcall_void(wpn, 195) to force skin update
 -- ============================================================
 local function process_weapon(wpn, paint, wear, seed, stat, statval)
-    local item = item_ptr(wpn)
-    mark_item_custom(item, true)
+    mark_item_custom(item_ptr(wpn))
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)  -- Force weapon to re-apply its skin
-    finish_item_custom(item)
 end
 
 local function restore_weapon(wpn)
-    local item = item_ptr(wpn)
-    if item and off.m_bRestoreCustomMat then w_u8(item + off.m_bRestoreCustomMat, 0) end
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
@@ -379,8 +390,7 @@ end
 
 local function restore_knife(wpn, pawn)
     local def_target = (r_u8(pawn + off.m_iTeamNum) == 2) and 59 or 42
-    local item = set_knife_subclass(wpn, def_target, 0)
-    if item and off.m_bRestoreCustomMat then w_u8(item + off.m_bRestoreCustomMat, 0) end
+    set_knife_subclass(wpn, def_target, 0)
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
@@ -713,9 +723,11 @@ end
 -- RUN
 -- ============================================================
 local function run()
+    finish_pending_materials()
     local lp = get_live_local()
     if not lp or not in_game() then
         if next(state.applied) then state.applied = {} end
+        pendingMaterialInit = {}
         return
     end
 
