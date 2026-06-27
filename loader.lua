@@ -7,7 +7,7 @@ local BRANCH = "main"                  -- or "master" / "release"
 
 local BASE = "https://raw.githubusercontent.com/" .. USER .. "/" .. REPO .. "/" .. BRANCH .. "/"
 
-local function fetch_and_run(file)
+local function fetch_and_run(file, global_name)
     local url = BASE .. file
     local src = http.Get(url)
     if not src or type(src) ~= "string" then
@@ -24,19 +24,24 @@ local function fetch_and_run(file)
         print("[loader] Runtime error in " .. file .. ": " .. tostring(ret))
         return false
     end
+    -- Store the returned value globally if a name is provided
+    if global_name then
+        _G[global_name] = ret
+    end
     print("[loader] Loaded " .. file)
     return true
 end
 
--- Load in correct order
+-- Load in correct order, storing returned tables in globals
 local files = {
-    "guilib.lua",
-    "skins_data.lua",   -- NEW: SKINS table
-    "changer.lua",
-    "main.lua"
+    { "guilib.lua", "FEMBOYTAP_GUI" },
+    { "skins_data.lua", nil },        -- this file sets _G.FEMBOYTAP_SKINS internally
+    { "changer.lua", "FEMBOYTAP_CHANGER" },
+    { "main.lua", nil },              -- main doesn't return anything, it uses the globals
 }
-for _, f in ipairs(files) do
-    if not fetch_and_run(f) then
+for _, entry in ipairs(files) do
+    local f, gname = entry[1], entry[2]
+    if not fetch_and_run(f, gname) then
         print("[loader] Aborting due to failure loading " .. f)
         return
     end
