@@ -1,5 +1,5 @@
 -- ============================================================
--- changer.lua – Skin & Model Changer (FULL FIXED)
+-- changer.lua – Skin & Model Changer (FULLY FIXED)
 -- ============================================================
 
 local ffi = ffi
@@ -571,7 +571,7 @@ local function scan_into(dir, names, paths)
 end
 
 -- ============================================================
--- FIXED scan_models with fallback
+-- scan_models with fallback
 -- ============================================================
 local g_modelNames, g_modelPaths
 
@@ -585,7 +585,7 @@ local function scan_models()
         end
     end)
     -- If no models were found, add fallback vanilla models
-    if #names == 1 then -- only "[ OFF ]"
+    if #names == 1 then
         local fallback = {
             "models/player/ct_urban.vmdl",
             "models/player/ct_sas.vmdl",
@@ -652,7 +652,7 @@ local function precache_model(path)
 end
 
 -- ============================================================
--- FIXED apply_local_model
+-- FIXED apply_local_model – always sets a default if needed
 -- ============================================================
 local function apply_local_model(pawn, lp)
     if not fnptr.set_model then return end
@@ -675,13 +675,15 @@ local function apply_local_model(pawn, lp)
         state.appliedLocalModel = path
         state.overrideActive    = true
     else
+        -- We want to restore original or set a default
         if state.appliedLocalModel == "OFF" then return end
-        if state.overrideActive and state.origModelName then
+        -- If we have an original model, restore it
+        if state.origModelName then
             precache_model(state.origModelName)
             pcall(function() fnptr.set_model(ffi.cast("void*", pawn), state.origModelName) end)
             state.overrideActive = false
-        elseif state.overrideActive and not state.origModelName then
-            -- No original model known – set a safe default
+        else
+            -- No original model – set a safe default
             local default = "models/player/ct_urban.vmdl"
             precache_model(default)
             pcall(function() fnptr.set_model(ffi.cast("void*", pawn), default) end)
