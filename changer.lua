@@ -296,16 +296,6 @@ local function safe_wear(wear)
     return wear
 end
 
-local function weapon_account_id()
-    local base = mem.GetModuleBase(DLL); if not base then return 0 end
-    local ctrl = r_ptr(base + off.dwLocalPlayerController)
-    if not valid(ctrl) then return 0 end
-    local sid = r_u64(ctrl + off.m_steamID)
-    return tonumber(sid % 0x100000000) or 0
-end
-
-local econ_attr_set, econ_attr_restore
-
 local function write_fallback(wpn, paint, wear, seed, stat, statval)
     w_i32(wpn + off.m_nFallbackPaintKit, paint)
     w_f32(wpn + off.m_flFallbackWear, safe_wear(wear))
@@ -319,11 +309,6 @@ local function mark_item_custom(item, restore_mat)
     -- setting both high+low to 0xFFFFFFFF can make some CS2 paint kits
     -- resolve fallback materials inconsistently on current builds.
     w_u32(item + off.m_iItemIDHigh, 0xFFFFFFFF)
-    local acc = weapon_account_id()
-    if acc > 0 then
-        if off.m_iAccountID then w_u32(item + off.m_iAccountID, acc) end
-        if off.m_OriginalOwnerXuidLow then w_u32(item + off.m_OriginalOwnerXuidLow, acc) end
-    end
     w_u8 (item + off.m_bInitialized, 1)
     w_u8 (item + off.m_bDisallowSOC, 0)
     w_u8 (item + off.m_bRestoreCustomMat, restore_mat and 1 or 0)
@@ -361,7 +346,6 @@ end
 local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
     local item = set_knife_subclass(wpn, def_target, 3)
     mark_item_custom(item, false)
-    if econ_attr_set then econ_attr_set(item, paint, seed, wear) end
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
@@ -371,9 +355,7 @@ end
 -- FIX: Added vcall_void(wpn, 195) to force skin update
 -- ============================================================
 local function process_weapon(wpn, paint, wear, seed, stat, statval)
-    local item = item_ptr(wpn)
-    mark_item_custom(item, false)
-    if econ_attr_set then econ_attr_set(item, paint, seed, wear) end
+    mark_item_custom(item_ptr(wpn), false)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)  -- Force weapon to re-apply its skin
@@ -381,7 +363,6 @@ end
 
 local function restore_weapon(wpn)
     local item = item_ptr(wpn)
-    if econ_attr_restore then econ_attr_restore(item) end
     if item and off.m_bRestoreCustomMat then w_u8(item + off.m_bRestoreCustomMat, 0) end
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
@@ -391,7 +372,6 @@ end
 local function restore_knife(wpn, pawn)
     local def_target = (r_u8(pawn + off.m_iTeamNum) == 2) and 59 or 42
     local item = set_knife_subclass(wpn, def_target, 0)
-    if econ_attr_restore then econ_attr_restore(item) end
     if item and off.m_bRestoreCustomMat then w_u8(item + off.m_bRestoreCustomMat, 0) end
     write_fallback(wpn, 0, 0.0001, 0, false)
     refresh_econ(wpn)
@@ -446,58 +426,6 @@ local function glove_attr_set(item, paint, seed, wear)
     mk(1, 7, seed)
     mk(2, 8, wear)
     local addr = item + off.m_AttributeList + off.m_Attributes
-    w_u64(addr, 3)
-    w_u64(addr + 8, bptr)
-end
-
-local owned_weapon_attrs, saved_weapon_attrs = {}, {}
-
-econ_attr_restore = function(item)
-    if not valid(item) then return end
-    local addr = item + off.m_AttributeList + off.m_Attributes
-    local cur_size = r_ptr(addr)
-    local cur_ptr  = r_ptr(addr + 8)
-    if owned_weapon_attrs[cur_ptr] and valid(cur_ptr) then
-        pcall(function() game_free(ffi.cast("void*", cur_ptr)) end)
-        owned_weapon_attrs[cur_ptr] = nil
-    end
-    local saved = saved_weapon_attrs[item]
-    if saved then
-        w_u64(addr, saved[1] or 0)
-        w_u64(addr + 8, saved[2] or 0)
-        saved_weapon_attrs[item] = nil
-    elseif owned_weapon_attrs[cur_ptr] or cur_size ~= 0 then
-        w_u64(addr, 0)
-        w_u64(addr + 8, 0)
-    end
-end
-
-econ_attr_set = function(item, paint, seed, wear)
-    if paint <= 0 or not valid(item) then econ_attr_restore(item); return end
-    if not resolve_mem() then return end
-    wear = safe_wear(wear)
-    local addr = item + off.m_AttributeList + off.m_Attributes
-    local old_size = r_ptr(addr)
-    local old_ptr  = r_ptr(addr + 8)
-    if not saved_weapon_attrs[item] and not owned_weapon_attrs[old_ptr] then
-        saved_weapon_attrs[item] = { old_size or 0, old_ptr or 0 }
-    end
-    if owned_weapon_attrs[old_ptr] and valid(old_ptr) then
-        pcall(function() game_free(ffi.cast("void*", old_ptr)) end)
-        owned_weapon_attrs[old_ptr] = nil
-    end
-    local raw  = game_alloc(ATTR_STRUCT * 3)
-    local bptr = tonumber(ffi.cast("uintptr_t", raw))
-    if not bptr or bptr == 0 then return end
-    for i = 0, (ATTR_STRUCT * 3) / 8 - 1 do w_u64(bptr + i * 8, 0) end
-    local function mk(i, def, val)
-        local b = bptr + i * ATTR_STRUCT
-        w_u16(b + 0x30, def); w_f32(b + 0x34, val); w_f32(b + 0x38, val)
-    end
-    mk(0, 6, paint)
-    mk(1, 7, seed or 0)
-    mk(2, 8, wear)
-    owned_weapon_attrs[bptr] = true
     w_u64(addr, 3)
     w_u64(addr + 8, bptr)
 end
