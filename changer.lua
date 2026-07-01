@@ -742,7 +742,7 @@ local function run()
         local wpn = handle_to_entity(elist, r_u32(arr + i*4))
         if wpn then
                   if r_u32(wpn + off.m_hOwnerEntity) == myHandle then
-                local def = r_u16(item_ptr(wpn) + off.m_iItemDefinitionIndex)
+                
 
                 if is_knife(def) then
                     local kdef = state.knifeDef or def
