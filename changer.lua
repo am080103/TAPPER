@@ -342,7 +342,6 @@ local function set_knife_subclass(wpn, def_target, quality)
 end
 
 if fnptr.regen_skins then fnptr.regen_skins() end   -- extra force
-end
 
 -- ============================================================
 -- FIX: Added vcall_void(wpn, 195) to force skin update
@@ -353,7 +352,7 @@ local function process_weapon(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
     if fnptr.regen_skins then fnptr.regen_skins() end   -- extra force
-end
+
 
 local function restore_weapon(wpn)
     local item = item_ptr(wpn)
