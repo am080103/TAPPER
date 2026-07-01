@@ -341,12 +341,7 @@ local function set_knife_subclass(wpn, def_target, quality)
     return item
 end
 
-local function process_knife(wpn, def_target, paint, wear, seed, stat, statval)
-    local item = set_knife_subclass(wpn, def_target, 3)
-    mark_item_custom(item, false)
-    write_fallback(wpn, paint, wear, seed, stat, statval)
-    refresh_econ(wpn)
-    vcall_void(wpn, 195)
+if fnptr.regen_skins then fnptr.regen_skins() end   -- extra force
 end
 
 -- ============================================================
@@ -356,7 +351,8 @@ local function process_weapon(wpn, paint, wear, seed, stat, statval)
     mark_item_custom(item_ptr(wpn), false)
     write_fallback(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
-    vcall_void(wpn, 195)  -- Force weapon to re-apply its skin
+    vcall_void(wpn, 195)
+    if fnptr.regen_skins then fnptr.regen_skins() end   -- extra force
 end
 
 local function restore_weapon(wpn)
