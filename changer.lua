@@ -741,7 +741,7 @@ local function run()
     for i = 0, count - 1 do
         local wpn = handle_to_entity(elist, r_u32(arr + i*4))
         if wpn then
-                        if r_u32(wpn + off.m_hOwnerEntity) == myHandle then
+                  if r_u32(wpn + off.m_hOwnerEntity) == myHandle then
                 local def = r_u16(item_ptr(wpn) + off.m_iItemDefinitionIndex)
 
                 if is_knife(def) then
@@ -757,10 +757,7 @@ local function run()
                     end
                 else
                     if state.pendingReset[def] then
-                        restore_weapon(wpn)
-                        applied[wpn] = nil
-                        state.pendingReset[def] = nil
-                        did = true
+                        restore_weapon(wpn); applied[wpn] = nil; state.pendingReset[def] = nil; did = true
                     else
                         local c = state.cfg[def]
                         if c then
@@ -774,9 +771,7 @@ local function run()
                             else
                                 local s = "w|none"
                                 if applied[wpn] ~= s then
-                                    restore_weapon(wpn)
-                                    applied[wpn] = s
-                                    did = true
+                                    restore_weapon(wpn); applied[wpn] = s; did = true
                                 end
                             end
                         end
