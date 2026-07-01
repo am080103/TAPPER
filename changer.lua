@@ -352,7 +352,7 @@ local function process_weapon(wpn, paint, wear, seed, stat, statval)
     refresh_econ(wpn)
     vcall_void(wpn, 195)
     if fnptr.regen_skins then fnptr.regen_skins() end   -- extra force
-
+end
 
 local function restore_weapon(wpn)
     local item = item_ptr(wpn)
