@@ -742,46 +742,41 @@ local function run()
         local wpn = handle_to_entity(elist, r_u32(arr + i*4))
         if wpn then
             if r_u32(wpn + off.m_hOwnerEntity) == myHandle then
-                do
-                    local def = r_u16(item_ptr(wpn) + off.m_iItemDefinitionIndex)
-                                                   if is_knife(def) then
-                                    local kdef = state.knifeDef or def
-                                    local kc = state.cfg[kdef] or state.cfg[def]
-                                    if kc then
-                                        local s = "k|"..kdef.."|"..kc.paint.."|"..kc.wear.."|"..kc.seed
-                                        if state.forceReapply or applied[wpn] ~= s then
-                                            process_knife(wpn, kdef, kc.paint, kc.wear, kc.seed, kc.stat, kc.statval)
-                                            applied[wpn] = s
-                                            did = true
-                                        end
-                                    end
-                                else
-                                    local c = state.cfg[def]
-                                    if c then
-                                        local s = "w|"..def.."|"..c.paint.."|"..c.wear.."|"..c.seed
-                                        if state.forceReapply or applied[wpn] ~= s then
-                                            process_weapon(wpn, c.paint, c.wear, c.seed, c.stat, c.statval)
-                                            applied[wpn] = s
-                                            did = true
-                                        end
-                                    end
-                                end
+                local def = r_u16(item_ptr(wpn) + off.m_iItemDefinitionIndex)
+
+                if is_knife(def) then
+                    local kdef = state.knifeDef or def
+                    local kc = state.cfg[kdef] or state.cfg[def]
+                    if kc then
+                        local s = "k|"..kdef.."|"..kc.paint.."|"..kc.wear.."|"..kc.seed
+                        if state.forceReapply or applied[wpn] ~= s then
+                            process_knife(wpn, kdef, kc.paint, kc.wear, kc.seed, kc.stat, kc.statval)
+                            applied[wpn] = s
+                            did = true
+                        end
+                    end
+                else
+                    if state.pendingReset[def] then
+                        restore_weapon(wpn)
+                        applied[wpn] = nil
+                        state.pendingReset[def] = nil
+                        did = true
                     else
-                        if state.pendingReset[def] then
-                            restore_weapon(wpn); applied[wpn] = nil; state.pendingReset[def] = nil; did = true
-                        else
-                            local c = state.cfg[def]
-                            if c then
-                                if c.paint > 0 then
-                                    local s = "w|"..c.paint.."|"..c.wear.."|"..c.seed.."|"..tostring(c.stat).."|"..tostring(c.statval or 0)
-                                    if applied[wpn] ~= s then
-                                        process_weapon(wpn, c.paint, c.wear, c.seed, c.stat, c.statval); applied[wpn]=s; did=true
-                                    end
-                                else
-                                    local s = "w|none"
-                                    if applied[wpn] ~= s then
-                                        restore_weapon(wpn); applied[wpn]=s; did=true
-                                    end
+                        local c = state.cfg[def]
+                        if c then
+                            if c.paint > 0 then
+                                local s = "w|"..def.."|"..c.paint.."|"..c.wear.."|"..c.seed
+                                if state.forceReapply or applied[wpn] ~= s then
+                                    process_weapon(wpn, c.paint, c.wear, c.seed, c.stat, c.statval)
+                                    applied[wpn] = s
+                                    did = true
+                                end
+                            else
+                                local s = "w|none"
+                                if applied[wpn] ~= s then
+                                    restore_weapon(wpn)
+                                    applied[wpn] = s
+                                    did = true
                                 end
                             end
                         end
