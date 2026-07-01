@@ -304,11 +304,8 @@ local function write_fallback(wpn, paint, wear, seed, stat, statval)
 end
 
 local function mark_item_custom(item, restore_mat)
-    -- Keep the item in fallback/custom mode, but do not force the engine
-    -- to restore cached custom materials. Leave m_iItemIDLow untouched:
-    -- setting both high+low to 0xFFFFFFFF can make some CS2 paint kits
-    -- resolve fallback materials inconsistently on current builds.
-    w_u32(item + off.m_iItemIDHigh, 0xFFFFFFFF)
+    w_u32(item + off.m_iItemIDHigh, 0xFFFFFFFF)     -- force fallback
+    w_u32(item + off.m_iItemIDLow,  0xFFFFFFFF)     -- also force low (helps on some builds)
     w_u8 (item + off.m_bInitialized, 1)
     w_u8 (item + off.m_bDisallowSOC, 0)
     w_u8 (item + off.m_bRestoreCustomMat, restore_mat and 1 or 0)
